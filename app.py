@@ -1,3 +1,5 @@
+
+
 import sqlite3
 import datetime
 import streamlit as st
@@ -174,3 +176,15 @@ if todos_los_datos:
                 st.session_state.confirmar_borrado = False
                 st.success("¡Historial médico eliminado con éxito!")
                 st.rerun()
+# =====================================================================
+# 7. CRÉDITOS DE AUTORÍA (¡Tu firma profesional!)
+# =====================================================================
+st.markdown("---")
+st.markdown(
+    """
+    <div style='text-align: center; font-size: 20px; color: #888888; padding-top: 20px;'>
+        💻 Aplicación diseñada y desarrollada por <strong>Lorena Martínez</strong>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
