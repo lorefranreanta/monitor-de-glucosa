@@ -19,6 +19,10 @@ cursor.execute("""
 """)
 conn.commit()
 
+# Inicializamos el estado de confirmación para que no falle Streamlit
+if 'confirmar_borrado' not in st.session_state:
+    st.session_state.confirmar_borrado = False
+
 
 # =====================================================================
 # 2. CONFIGURACIÓN DE PÁGINA Y ESTILOS VISUALES (HTML/CSS) - MODO OSCURO
@@ -108,19 +112,27 @@ if st.button("Guardar Registro"):
             st.balloons()
 
 
-# Leemos los datos guardados de la base de datos
+# Leemos TODOS los datos de la base de datos para verificar si hay registros generales
 cursor.execute("SELECT nombre, glucosa, momento, fecha FROM mediciones ORDER BY id DESC")
-datos = cursor.fetchall()
+todos_los_datos = cursor.fetchall()
 
 
 # =====================================================================
-# 5. HISTORIAL CLÍNICO DE SEGUIMIENTO
+# 5. HISTORIAL CLÍNICO DE SEGUIMIENTO INTELIGENTE
 # =====================================================================
 st.markdown("---")
-st.subheader("📊 Historial Clínico de Mediciones")
 
-if datos:
-    for fila in datos:
+# Filtramos dinámicamente si el usuario escribió un nombre arriba
+if nombre_usuario.strip() != "":
+    st.subheader(f"📊 Historial Clínico de: {nombre_usuario}")
+    cursor.execute("SELECT nombre, glucosa, momento, fecha FROM mediciones WHERE LOWER(nombre) = LOWER(?) ORDER BY id DESC", (nombre_usuario.strip(),))
+    datos_filtrados = cursor.fetchall()
+else:
+    st.subheader("📊 Historial Clínico General")
+    datos_filtrados = todos_los_datos
+
+if datos_filtrados:
+    for fila in datos_filtrados:
         nombre, glucosa, momento, fecha = fila
 
         if glucosa > 120:
@@ -132,23 +144,23 @@ if datos:
 
         st.info(f"**{nombre}** | **{glucosa} mg/dL** ({color}) | Estado: *{momento}* | 🕒 *{fecha}*")
 else:
-    st.info("Aún no hay mediciones registradas. ¡Ingresa la primera para iniciar el historial!")
+    st.info("No hay mediciones registradas para este nombre aún.")
 
 
 # =====================================================================
 # 6. BOTÓN DE SEGURIDAD PARA REINICIAR DATOS (Reset)
 # =====================================================================
-if datos:
+if todos_los_datos:
     st.markdown("---")
-    st.subheader("⚙️ Zona de Peligro")
+    st.subheader("⚙️ Zona de Control del Historial")
     
-    # Primero el usuario presiona el botón principal de intentar borrar
+    # Botón para activar el estado de confirmación
     if st.button("🗑️ Borrar todo el Historial"):
         st.session_state.confirmar_borrado = True
 
-    # Si lo presionó, se despliega esta segunda advertencia de confirmación por seguridad
-    if st.get_value_checkbox if hasattr(st, 'get_value_checkbox') else st.session_state.get('confirmar_borrado', False):
-        st.warning("⚠️ ¿Está completamente seguro? Esta acción eliminará permanentemente todos los registros y no se puede deshacer.")
+    # Sistema de confirmación seguro
+    if st.session_state.confirmar_borrado:
+        st.warning("⚠️ ¿Está completamente seguro? Esta acción eliminará los registros de todos los pacientes permanentemente.")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -156,10 +168,9 @@ if datos:
                 st.session_state.confirmar_borrado = False
                 st.rerun()
         with col2:
-            if st.button("💥 Sí, borrar de todos modos"):
-                # Ejecutamos la orden SQL para vaciar la tabla
+            if st.button("💥 Sí, borrar todo de todos modos"):
                 cursor.execute("DELETE FROM mediciones")
                 conn.commit()
                 st.session_state.confirmar_borrado = False
                 st.success("¡Historial médico eliminado con éxito!")
-                st.rerun() # Recarga la pantalla para mostrar el historial vacío
+                st.rerun()
