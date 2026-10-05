@@ -1,7 +1,6 @@
 import sqlite3
 import datetime
 import streamlit as st
-import pandas as pd
 
 # =====================================================================
 # 1. CONFIGURACIÓN DE LA BASE DE DATOS (SQLite)
@@ -22,57 +21,56 @@ conn.commit()
 
 
 # =====================================================================
-# 2. CONFIGURACIÓN DE PÁGINA Y ESTILOS VISUALES (HTML/CSS)
+# 2. CONFIGURACIÓN DE PÁGINA Y ESTILOS VISUALES (HTML/CSS) - MODO OSCURO
 # =====================================================================
 st.set_page_config(page_title="Monitor de Glucosa", page_icon="🩸", layout="centered")
 
-# Código CSS para fondo animado rojo con destellos blancos y letras grandes
+# Código CSS para fondo negro con destellos muy suaves y letras grandes accesibles
 st.markdown("""
     <style>
-    /* 1. Fondo rojo con animación de destellos blancos */
+    /* 1. Fondo negro con animación de destellos grises oscuros (descanso visual) */
     .stApp {
-        background: radial-gradient(circle, rgba(215,35,35,1) 0%, rgba(135,15,15,1) 100%);
+        background: radial-gradient(circle, rgba(20,20,20,1) 0%, rgba(5,5,5,1) 100%);
         background-size: 400% 400%;
-        animation: destellos 10s ease infinite;
+        animation: destellosSuaves 15s ease infinite;
     }
     
-    @keyframes destellos {
+    @keyframes destellosSuaves {
         0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; rgba(255,255,255,0.15) 0% }
+        50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
 
-    /* 2. Accesibilidad: Aumentar tamaño de letras para mayores de 55 años */
+    /* 2. Accesibilidad: Letras grandes para lectura clara */
     html, body, [data-testid="stWidgetLabel"], p, li, .stSelectbox, input {
-        font-size: 24px !important; /* Letras normales y etiquetas mucho más grandes */
-        color: #FFFFFF !important; /* Texto blanco para resaltar sobre el fondo rojo */
+        font-size: 24px !important; 
+        color: #FFFFFF !important; /* Texto blanco de alto contraste sobre fondo negro */
         font-weight: 500 !important;
     }
     
-    /* Títulos principales gigantes */
+    /* Títulos principales */
     h1 {
-        font-size: 48px !important;
-        color: #FFFFFF !important;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        font-size: 44px !important;
+        color: #FF4B4B !important; /* Solo el título lleva un detalle rojo clínico elegante */
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
     }
     
-    /* Subtítulos grandes */
+    /* Subtítulos */
     h2, h3 {
-        font-size: 32px !important;
-        color: #FFF0F0 !important;
-        text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        font-size: 30px !important;
+        color: #E0E0E0 !important;
     }
 
-    /* Estilo especial para los textos dentro de las cajas de entrada */
+    /* Cuadros de entrada de texto */
     input {
-        background-color: rgba(255, 255, 255, 0.9) !important;
-        color: #333333 !important; /* Texto oscuro dentro del input para que se lea bien */
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        color: #111111 !important; /* Texto oscuro dentro para que se lea perfecto al escribir */
         font-size: 22px !important;
     }
     
-    /* Ajuste para que los textos de las alertas sigan siendo legibles */
+    /* Textos dentro de las alertas */
     .stAlert p {
-        color: #333333 !important; /* Texto oscuro dentro de las alertas para contraste */
+        color: #111111 !important; 
         font-size: 22px !important;
     }
     </style>
@@ -80,10 +78,10 @@ st.markdown("""
 
 
 # =====================================================================
-# 3. INTERFAZ INTERACTIVA CON TEXTO GRANDE (Streamlit)
+# 3. INTERFAZ INTERACTIVA ACCESIBLE (Streamlit)
 # =====================================================================
-st.title("🩸 Monitor de Glucosa Inteligente")
-st.write("Guarde sus niveles de forma fácil. Diseñado para una lectura clara.")
+st.title("🩸 Monitor de Glucosa")
+st.write("Guarde sus niveles de forma fácil y segura. Diseñado para una lectura clara.")
 
 st.subheader("📝 Nueva Medición")
 nombre_usuario = st.text_input("Escribe tu nombre:", placeholder="Ej. María")
@@ -97,6 +95,7 @@ if st.button("Guardar Registro"):
     if nombre_usuario.strip() == "":
         st.error("⚠️ Por favor, escribe tu nombre antes de guardar.")
     else:
+        # Registramos fecha y hora exacta para el seguimiento médico
         fecha_actual = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
         cursor.execute(
@@ -111,32 +110,19 @@ if st.button("Guardar Registro"):
         if nivel_glucosa > 120:
             st.error(f"🚨 **¡Atención {nombre_usuario}!** Tu nivel está ALTO ({nivel_glucosa} mg/dL). Te recomendamos revisar tu alimentación y consultar a tu médico.")
         elif nivel_glucosa < 70:
-            st.warning(f"⚠️ **¡Alerta {nombre_usuario}!** Tu nivel está BAJO ({nivel_glucosa} mg/dL). Por favor, consume una fuente de azúcar rápido para regularizarte.")
+            st.warning(f"⚠️ **¡Alerta {nombre_usuario}!** Tu nivel está BAJO ({nivel_glucosa} mg/dL). Por favor, consume una fuente de azúcar rápido.")
         else:
             st.success(f"✅ **¡Excelente {nombre_usuario}!** Tu nivel está NORMAL ({nivel_glucosa} mg/dL). ¡Sigue así!")
             st.balloons()
 
 
-# Leemos los datos de la base de datos
+# Leemos los datos guardados de la base de datos SQLite
 cursor.execute("SELECT nombre, glucosa, momento, fecha FROM mediciones ORDER BY id DESC")
 datos = cursor.fetchall()
 
 
 # =====================================================================
-# 5. GRÁFICO INTERACTIVO EN TIEMPO REAL
-# =====================================================================
-st.markdown("---")
-st.subheader("📈 Evolución de los Niveles de Glucosa")
-
-if datos:
-    df = pd.DataFrame(datos, columns=["Nombre", "Glucosa", "Momento", "Fecha"])[::-1]
-    st.line_chart(data=df, x="Fecha", y="Glucosa")
-else:
-    st.info("El gráfico aparecerá automáticamente cuando ingreses datos.")
-
-
-# =====================================================================
-# 6. HISTORIAL EN TIEMPO REAL
+# 5. HISTORIAL CLÍNICO DE SEGUIMIENTO (Tu sección favorita)
 # =====================================================================
 st.markdown("---")
 st.subheader("📊 Historial Clínico de Mediciones")
@@ -145,6 +131,7 @@ if datos:
     for fila in datos:
         nombre, glucosa, momento, fecha = fila
 
+        # Clasificación por colores visuales simples para los adultos mayores
         if glucosa > 120:
             color = "🔴 Alto"
         elif glucosa < 70:
@@ -152,6 +139,6 @@ if datos:
         else:
             color = "🟢 Normal"
 
-        st.info(f"**{nombre}** | {glucosa} mg/dL ({color}) | Estado: *{momento}* | 🕒 *{fecha}*")
+        st.info(f"**{nombre}** | **{glucosa} mg/dL** ({color}) | Estado: *{momento}* | 🕒 *{fecha}*")
 else:
-    st.info("Aún no hay mediciones registradas. ¡Ingresa la primera!")
+    st.info("Aún no hay mediciones registradas. ¡Ingresa la primera para iniciar el historial!")
